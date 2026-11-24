@@ -4,13 +4,16 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#1f1c26" />
-<title>유물 복원 & 박물관 타이쿤</title>
+<title>5초 유물 발굴 & 박물관 타이쿤</title>
 <style>
   :root {
-    --bg-dark: #141218;
-    --panel: #1f1c26;
-    --panel-light: #2b2735;
+    --bg-dark: #131118;
+    --panel: #1e1b26;
+    --panel-light: #2a2636;
     --accent: #f5b942;
+    --accent-blue: #38bdf8;
+    --accent-red: #f87171;
+    --accent-green: #4ade80;
     --text-main: #f4f1ea;
     --text-sub: #a39eb0;
   }
@@ -60,7 +63,7 @@
 
   .stat-box { display: flex; flex-direction: column; }
   .stat-label { font-size: 11px; color: var(--text-sub); }
-  .stat-val { font-size: 17px; font-weight: 800; color: var(--accent); }
+  .stat-val { font-size: 18px; font-weight: 800; color: var(--accent); }
 
   .header-right {
     display: flex;
@@ -70,7 +73,7 @@
 
   .passive-badge {
     background: rgba(56, 189, 248, 0.15);
-    color: #38bdf8;
+    color: var(--accent-blue);
     padding: 5px 10px;
     border-radius: 20px;
     font-size: 12px;
@@ -97,201 +100,386 @@
     touch-action: pan-y;
   }
 
-  .tab-view {
-    display: none;
-  }
+  .tab-view { display: none; }
+  .tab-view.active { display: block; padding-bottom: 24px; }
 
-  #tab-workshop.active {
+  #tab-dig.active {
     display: flex;
     flex-direction: column;
     height: 100%;
+    padding-bottom: 0;
   }
 
-  #tab-museum.active {
-    display: block;
-    padding-bottom: 24px;
-    touch-action: pan-y;
-  }
-
-  .stage-header {
+  /* 발굴 상단 정보 & 타이머 */
+  .dig-top-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
   }
 
-  .stage-badge {
+  .stage-pill {
     background: var(--panel-light);
-    padding: 5px 12px;
-    border-radius: 8px;
+    padding: 6px 12px;
+    border-radius: 10px;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
   }
 
-  .grade-tag {
-    padding: 5px 10px;
-    border-radius: 8px;
+  .stage-pill span { color: var(--accent); }
+
+  .relic-target-info {
     font-size: 12px;
-    font-weight: 700;
-    background: #2a2633;
-    color: #d4d0de;
+    color: var(--text-sub);
+    background: #1a1722;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid #2e2938;
   }
 
-  .canvas-wrapper {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    max-height: 52dvh;
-    margin: 0 auto;
-    background: radial-gradient(circle at center, #282333 0%, #16131c 100%);
-    border-radius: 20px;
-    border: 2px solid #332e40;
-    overflow: hidden;
-    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.65);
-    touch-action: none;
+  .timer-box {
+    background: var(--panel);
+    border: 1px solid #332e40;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
   }
 
-  canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-    touch-action: none;
-  }
-
-  .progress-wrap { margin-top: 12px; }
-  .progress-info {
+  .timer-row {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
+    align-items: center;
     margin-bottom: 6px;
   }
 
-  .progress-bar-bg {
+  .timer-label { font-size: 12px; color: var(--text-sub); font-weight: 600; }
+  .timer-val { font-size: 18px; font-weight: 900; color: var(--accent-green); font-variant-numeric: tabular-nums; }
+  .timer-val.urgent { color: var(--accent-red); animation: pulse 0.4s infinite alternate; }
+
+  @keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.08); }
+  }
+
+  .timer-bar-bg {
     width: 100%;
-    height: 13px;
-    background: #262230;
+    height: 10px;
+    background: #141218;
     border-radius: 99px;
     overflow: hidden;
   }
 
-  .progress-bar-fill {
+  .timer-bar-fill {
     height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #f59e0b, #fde047);
-    transition: width 0.08s ease-out;
+    width: 100%;
+    background: linear-gradient(90deg, #4ade80, #facc15);
+    transition: width 0.05s linear;
   }
 
-  .upgrade-card {
-    margin-top: auto;
-    background: var(--panel);
-    border: 1px solid #353042;
-    border-radius: 14px;
-    padding: 12px 14px;
+  /* 발굴 격자 보드 */
+  .board-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+  }
+
+  .dig-board {
+    position: relative;
+    width: 100%;
+    max-width: 350px;
+    aspect-ratio: 1 / 1;
+    background: #18151f;
+    border: 3px solid #353042;
+    border-radius: 18px;
+    padding: 8px;
+    display: grid;
+    gap: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    touch-action: manipulation;
+  }
+
+  /* 유물 레이어 (타일 아래 깔림) */
+  .relic-layer {
+    position: absolute;
+    inset: 8px;
+    display: grid;
+    gap: 6px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .relic-item-box {
+    background: radial-gradient(circle, rgba(245,185,66,0.28) 0%, rgba(245,185,66,0.08) 100%);
+    border: 2px dashed rgba(245, 185, 66, 0.55);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+
+  .relic-item-box.found {
+    background: radial-gradient(circle, rgba(250,204,21,0.45) 0%, rgba(245,158,11,0.2) 100%);
+    border: 2px solid #fde047;
+    box-shadow: 0 0 16px rgba(250, 204, 21, 0.5);
+    animation: foundPop 0.35s ease-out;
+  }
+
+  @keyframes foundPop {
+    0% { transform: scale(0.85); }
+    60% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  .relic-size-badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    background: rgba(0,0,0,0.65);
+    color: #fde047;
+    padding: 1px 5px;
+    border-radius: 5px;
+  }
+
+  /* 돌 블록 레이어 */
+  .tile-layer {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+  }
+
+  .rock-tile {
+    background: linear-gradient(145deg, #574b42, #3d342e);
+    border: 2px solid #6e5f54;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.06s ease, opacity 0.15s ease;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.35);
+    touch-action: manipulation;
+  }
+
+  .rock-tile:active {
+    transform: scale(0.92);
+  }
+
+  .rock-tile.damaged {
+    background: linear-gradient(145deg, #463c35, #2f2823);
+    border-style: dashed;
+  }
+
+  /* 유물이 아래에 있을 때 금 간 틈새에서 황금빛이 비침 */
+  .rock-tile.gold-peek {
+    border-color: #f5b942;
+    box-shadow: inset 0 0 12px rgba(245, 185, 66, 0.55);
+  }
+
+  /* 특성 힌트 타일 */
+  .rock-tile.hint-glow {
+    border-color: #38bdf8;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.7), inset 0 0 10px rgba(56, 189, 248, 0.4);
+  }
+
+  .rock-tile.broken {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.7);
+  }
+
+  .tile-hp {
+    font-size: 12px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.75);
+    background: rgba(0,0,0,0.35);
+    padding: 2px 7px;
+    border-radius: 99px;
+  }
+
+  .dig-footer-hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-sub);
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
+
+  /* 특성(업그레이드) 탭 */
+  .section-title {
+    font-size: 15px;
+    font-weight: 800;
+    margin: 0 0 10px 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .tool-info h4 {
+  .trait-card {
+    background: var(--panel);
+    border: 1px solid #322d3d;
+    border-radius: 14px;
+    padding: 13px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .trait-info h4 {
     margin: 0 0 4px 0;
-    font-size: 15px;
+    font-size: 14px;
     display: flex;
     align-items: center;
     gap: 6px;
   }
 
-  .tool-info p {
+  .trait-lv {
+    font-size: 11px;
+    background: rgba(245, 185, 66, 0.18);
+    color: var(--accent);
+    padding: 2px 7px;
+    border-radius: 6px;
+  }
+
+  .trait-info p {
     margin: 0;
     font-size: 12px;
     color: var(--text-sub);
+    line-height: 1.4;
   }
 
-  .btn-upgrade {
+  .btn-buy {
     background: var(--accent);
-    color: #18141c;
+    color: #16131c;
     border: none;
     border-radius: 10px;
-    padding: 10px 14px;
+    padding: 10px 12px;
     font-weight: 800;
-    font-size: 13px;
+    font-size: 12px;
+    min-width: 96px;
     cursor: pointer;
-    min-width: 110px;
+    flex-shrink: 0;
   }
 
-  .btn-upgrade:disabled {
-    background: #363142;
+  .btn-buy:disabled {
+    background: #332e40;
     color: #777185;
+    cursor: not-allowed;
   }
 
-  .museum-summary {
-    background: var(--panel);
-    padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 12px;
+  /* 박물관 탭 */
+  .museum-top-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    background: var(--panel);
+    padding: 11px 14px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #322d3d;
   }
 
-  .theme-section {
+  .btn-auto-equip {
+    background: rgba(56, 189, 248, 0.2);
+    color: var(--accent-blue);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .hall-card {
     background: var(--panel);
+    border: 1px solid #353042;
     border-radius: 14px;
     padding: 12px;
     margin-bottom: 12px;
-    border: 1px solid #2e2938;
   }
 
-  .theme-header {
+  .hall-card.locked {
+    background: #17141f;
+    border-style: dashed;
+    text-align: center;
+    padding: 18px 12px;
+  }
+
+  .hall-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
   }
 
-  .theme-title { font-weight: 700; font-size: 14px; }
-  .theme-bonus {
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    background: #2b2735;
-    color: var(--text-sub);
-  }
-  .theme-bonus.unlocked {
-    background: rgba(245, 185, 66, 0.2);
-    color: var(--accent);
-    font-weight: 700;
-  }
+  .hall-name { font-weight: 800; font-size: 14px; }
+  .hall-income { font-size: 12px; color: var(--accent-blue); font-weight: 700; }
 
-  .relic-grid {
+  .display-slots {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
 
-  .relic-slot {
-    background: #17141d;
-    border: 1px solid #2d2838;
+  .display-slot {
+    background: #141218;
+    border: 1.5px dashed #3d374d;
+    border-radius: 10px;
+    padding: 8px 4px;
+    text-align: center;
+    cursor: pointer;
+    min-height: 76px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .display-slot.filled {
+    border-style: solid;
+    border-color: #5b5173;
+    background: #231f2e;
+  }
+
+  .slot-emoji { font-size: 24px; }
+  .slot-name { font-size: 10px; color: var(--text-main); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .slot-rate { font-size: 10px; color: var(--accent); font-weight: 700; }
+
+  /* 보유 유물 보관함 */
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .inv-item {
+    background: var(--panel);
+    border: 1px solid #322d3d;
     border-radius: 10px;
     padding: 10px 6px;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+    cursor: pointer;
   }
 
-  .relic-slot.owned {
-    border-color: #4b435c;
-    background: #231f2d;
+  .inv-item.equipped {
+    border-color: var(--accent-green);
+    background: rgba(74, 222, 128, 0.08);
   }
 
-  .relic-emoji { font-size: 28px; filter: grayscale(1) brightness(0.25); }
-  .relic-slot.owned .relic-emoji { filter: none; }
-  .relic-name { font-size: 11px; font-weight: 600; color: var(--text-sub); }
-  .relic-slot.owned .relic-name { color: var(--text-main); }
-  .relic-income { font-size: 10px; color: #38bdf8; }
-
+  /* 하단 탭 네비게이션 */
   nav {
     display: flex;
     background: var(--panel);
@@ -304,9 +492,9 @@
     background: none;
     border: none;
     color: var(--text-sub);
-    padding: 14px 0;
-    font-size: 14px;
-    font-weight: 700;
+    padding: 13px 0;
+    font-size: 13px;
+    font-weight: 800;
     cursor: pointer;
   }
 
@@ -315,41 +503,72 @@
     border-top: 2px solid var(--accent);
   }
 
+  /* 정산 및 선택 모달 */
   .modal-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.82);
     display: none;
     justify-content: center;
     align-items: center;
-    padding: 20px;
-    z-index: 50;
+    padding: 18px;
+    z-index: 60;
   }
 
   .modal-overlay.show { display: flex; }
 
   .modal-card {
     background: var(--panel);
-    border: 1px solid #443d54;
+    border: 1px solid #484059;
     border-radius: 18px;
-    padding: 22px;
+    padding: 20px;
     width: 100%;
-    max-width: 340px;
+    max-width: 350px;
+    max-height: 80dvh;
+    overflow-y: auto;
     text-align: center;
   }
 
-  .modal-emoji { font-size: 56px; margin: 10px 0; }
+  .settle-list {
+    background: #141218;
+    border-radius: 12px;
+    padding: 10px;
+    margin: 12px 0;
+    text-align: left;
+  }
+
+  .settle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 4px;
+    border-bottom: 1px solid #252130;
+    font-size: 13px;
+  }
+
+  .settle-row:last-child { border-bottom: none; }
+
+  .modal-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
   .modal-btn {
-    margin-top: 16px;
-    width: 100%;
-    padding: 13px;
+    flex: 1;
+    padding: 12px;
     border: none;
     border-radius: 10px;
     background: var(--accent);
-    color: #18141c;
+    color: #16131c;
     font-weight: 800;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
+  }
+
+  .modal-btn.secondary {
+    background: #2e293b;
+    color: var(--text-main);
   }
 </style>
 </head>
@@ -367,133 +586,127 @@
   </header>
 
   <main id="mainScroll">
-    <section id="tab-workshop" class="tab-view active">
-      <div class="stage-header">
-        <span class="stage-badge" id="stageText">STAGE 1 (내구도 Lv.1)</span>
-        <span class="grade-tag" id="gradeText">❓ 미확인 흙덩어리</span>
+    <!-- 1. 발굴 탭 -->
+    <section id="tab-dig" class="tab-view active">
+      <div class="dig-top-bar">
+        <div class="stage-pill">STAGE <span id="stageNumText">1</span> (<span id="gridSizeText">3×3</span>)</div>
+        <div class="relic-target-info" id="targetRelicHint">매장 유물: 1개</div>
       </div>
 
-      <div class="canvas-wrapper">
-        <canvas id="gameCanvas" width="380" height="380"></canvas>
-      </div>
-
-      <div class="progress-wrap">
-        <div class="progress-info">
-          <span id="statusHint">손가락으로 흙덩어리를 문질러 발굴하세요!</span>
-          <strong id="percentText">0%</strong>
+      <div class="timer-box">
+        <div class="timer-row">
+          <span class="timer-label" id="timerStatusText">블록을 두드리면 타이머가 시작됩니다!</span>
+          <span class="timer-val" id="timerText">5.0초</span>
         </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="progressFill"></div>
+        <div class="timer-bar-bg">
+          <div class="timer-bar-fill" id="timerFill"></div>
         </div>
       </div>
 
-      <div class="upgrade-card">
-        <div class="tool-info">
-          <h4><span id="toolIcon">🖌️</span> <span id="toolName">나무 붓 Lv.1</span></h4>
-          <p id="toolDesc">연마력 22 | 범위 20px</p>
+      <div class="board-container">
+        <div class="dig-board" id="digBoard">
+          <div class="relic-layer" id="relicLayer"></div>
+          <div class="tile-layer" id="tileLayer"></div>
         </div>
-        <button class="btn-upgrade" id="upgradeBtn">강화<br><span id="upgradeCost">250 G</span></button>
       </div>
+
+      <div class="dig-footer-hint" id="digSubHint">2칸·4칸 대형 유물은 덮인 칸을 모두 깨야 획득합니다!</div>
     </section>
 
+    <!-- 2. 특성(업그레이드) 탭 -->
+    <section id="tab-traits" class="tab-view">
+      <h3 class="section-title">⚡ 발굴 & 감정 특성 강화</h3>
+      <div id="traitsContainer"></div>
+    </section>
+
+    <!-- 3. 박물관 탭 -->
     <section id="tab-museum" class="tab-view">
-      <div class="museum-summary">
-        <span>수집: <strong id="collectedCount">0 / 12</strong></span>
-        <span>복원 가속: <strong id="bonusSpeedText" style="color:#fbbf24;">+0%</strong></span>
+      <div class="museum-top-actions">
+        <div>
+          <div style="font-size:13px; font-weight:800;">🏛️ 전시실 관리 (칸당 최대 4개)</div>
+          <div style="font-size:11px; color:#a39eb0;">슬롯을 터치해 유물을 배치하거나 교체하세요</div>
+        </div>
+        <button class="btn-auto-equip" id="autoEquipBtn">최고 수익 자동배치</button>
       </div>
-      <div id="museumList"></div>
+
+      <div id="hallsContainer"></div>
+
+      <h3 class="section-title" style="margin-top:16px;">
+        <span>🎒 발굴한 유물 보관함</span>
+        <span style="font-size:12px; color:#a39eb0;" id="invCountText">0종 보유</span>
+      </h3>
+      <div class="inv-grid" id="inventoryContainer"></div>
     </section>
   </main>
 
   <nav>
-    <button class="active" data-target="tab-workshop">⛏️ 복원 작업실</button>
-    <button data-target="tab-museum">🏛️ 박물관 도감</button>
+    <button class="active" data-target="tab-dig">⛏️ 유물 발굴</button>
+    <button data-target="tab-traits">⚡ 특성 강화</button>
+    <button data-target="tab-museum">🏛️ 박물관</button>
   </nav>
 
+  <!-- 정산 & 슬롯 선택 모달 -->
   <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-card">
-      <div id="modalSubtitle" style="font-size:12px; color:#a39eb0;">감정 및 복원 완료!</div>
-      <div class="modal-emoji" id="modalEmoji">👑</div>
-      <h3 id="modalTitle" style="margin:4px 0;">신라 금관</h3>
-      <p id="modalDesc" style="font-size:13px; color:#d4d0de; line-height:1.5; margin:8px 0;"></p>
-      <button class="modal-btn" id="modalCloseBtn">확인 및 다음 발굴</button>
-    </div>
+    <div class="modal-card" id="modalContent"></div>
   </div>
 </div>
 
 <script>
-const THEMES = [
-  {
-    id: 'silla',
-    name: '🇰🇷 신라 시대 유물 세트',
-    bonusType: 'speed',
-    bonusValue: 0.25,
-    bonusLabel: '복원 속도 +25%',
-    items: [
-      { id: 'silla_1', name: '토기 주전자', emoji: '🏺', grade: 'common', baseReward: 140, income: 4 },
-      { id: 'silla_2', name: '금동 반가사유상', emoji: '🧘', grade: 'rare', baseReward: 320, income: 10 },
-      { id: 'silla_3', name: '천마총 금관', emoji: '👑', grade: 'legendary', baseReward: 750, income: 24 }
-    ]
-  },
-  {
-    id: 'egypt',
-    name: '🇪🇬 고대 이집트 세트',
-    bonusType: 'speed',
-    bonusValue: 0.35,
-    bonusLabel: '복원 속도 +35%',
-    items: [
-      { id: 'egypt_1', name: '스카라베 부적', emoji: '🪲', grade: 'common', baseReward: 165, income: 5 },
-      { id: 'egypt_2', name: '아누비스 석상', emoji: '🐺', grade: 'rare', baseReward: 380, income: 12 },
-      { id: 'egypt_3', name: '투탕카멘 황금가면', emoji: '🎭', grade: 'legendary', baseReward: 900, income: 30 }
-    ]
-  },
-  {
-    id: 'medieval',
-    name: '⚔️ 중세 왕국 세트',
-    bonusType: 'income',
-    bonusValue: 0.30,
-    bonusLabel: '박물관 수익 +30%',
-    items: [
-      { id: 'med_1', name: '청동 나침반', emoji: '🧭', grade: 'common', baseReward: 190, income: 6 },
-      { id: 'med_2', name: '왕실 루비 성배', emoji: '🏆', grade: 'rare', baseReward: 440, income: 15 },
-      { id: 'med_3', name: '전설의 엑스칼리버', emoji: '🗡️', grade: 'legendary', baseReward: 1100, income: 38 }
-    ]
-  },
-  {
-    id: 'fake_set',
-    name: '🤡 황당한 가품 컬렉션',
-    bonusType: 'speed',
-    bonusValue: 0.20,
-    bonusLabel: '어이없음 가속 +20%',
-    items: [
-      { id: 'fake_1', name: '찌그러진 콜라 캔', emoji: '🥫', grade: 'fake', baseReward: 65, income: 1 },
-      { id: 'fake_2', name: '한 짝 남은 삼선슬리퍼', emoji: '🩴', grade: 'fake', baseReward: 75, income: 1 },
-      { id: 'fake_3', name: '녹슨 참치캔 뚜껑', emoji: '💿', grade: 'fake', baseReward: 85, income: 2 }
-    ]
-  }
+/**
+ * 1. 유물 도감 데이터 (1칸 / 2칸 / 4칸 크기별 유물)
+ */
+const RELIC_DB = [
+  // 1칸짜리 유물 (1x1)
+  { id: 'r1_coin', name: '고대 엽전', emoji: '🪙', w: 1, h: 1, basePrice: 120, income: 3, minStage: 1 },
+  { id: 'r1_pot', name: '청자 찻잔', emoji: '🍵', w: 1, h: 1, basePrice: 160, income: 4, minStage: 1 },
+  { id: 'r1_ring', name: '루비 반지', emoji: '💍', w: 1, h: 1, basePrice: 230, income: 6, minStage: 1 },
+  { id: 'r1_can', name: '찌그러진 캔(가품)', emoji: '🥫', w: 1, h: 1, basePrice: 45, income: 1, minStage: 1 },
+
+  // 2칸짜리 유물 (2x1 또는 1x2)
+  { id: 'r2_sword', name: '청동 단검', emoji: '🗡️', w: 2, h: 1, basePrice: 380, income: 11, minStage: 1 },
+  { id: 'r2_scroll', name: '황금 두루마리', emoji: '📜', w: 1, h: 2, basePrice: 450, income: 14, minStage: 2 },
+  { id: 'r2_harp', name: '고대 수금', emoji: '🪕', w: 2, h: 1, basePrice: 560, income: 18, minStage: 2 },
+
+  // 4칸짜리 대형 유물 (2x2) - 중반 스테이지부터 등장
+  { id: 'r4_crown', name: '신라 황금관', emoji: '👑', w: 2, h: 2, basePrice: 1350, income: 45, minStage: 3 },
+  { id: 'r4_statue', name: '파라오 황금상', emoji: '🗿', w: 2, h: 2, basePrice: 1800, income: 62, minStage: 4 },
+  { id: 'r4_dragon', name: '전설의 옥새함', emoji: '🐉', w: 2, h: 2, basePrice: 2500, income: 88, minStage: 5 }
 ];
 
-const ALL_ITEMS = THEMES.flatMap(t => t.items);
-const GRADE_META = {
-  common: { label: '일반 유물', color: '#9ca3af' },
-  rare: { label: '희귀 유물', color: '#38bdf8' },
-  legendary: { label: '전설 유물', color: '#fbbf24' },
-  fake: { label: '가품 (짝퉁!)', color: '#f87171' }
-};
+const HALL_UNLOCK_COSTS = [0, 1200, 6500, 28000, 120000];
 
-const STORAGE_KEY = 'relic_tycoon_native_v1';
+/**
+ * 2. 게임 상태 저장/불러오기
+ */
+const STORAGE_KEY = 'dig5sec_tycoon_v1';
 let state = {
   gold: 0,
   stage: 1,
-  toolLevel: 1,
-  owned: {},
+  traits: {
+    time: 0,      // +0.5초씩 증가
+    power: 0,     // 타격력 +1씩 증가
+    hint: 0,      // 시작 시 유물 칸 힌트 개수
+    price: 0,     // 유물 가격 +10%씩 증가
+    luck: 0       // 대형(2칸/4칸) 유물 등장 확률 증가
+  },
+  inventory: {},  // { relicId: count }
+  halls: [
+    [null, null, null, null] // 제1전시실 기본 오픈 (4칸)
+  ],
   lastSaveTime: Date.now()
 };
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = { ...state, ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      state = {
+        ...state,
+        ...parsed,
+        traits: { ...state.traits, ...(parsed.traits || {}) }
+      };
+    }
   } catch (e) {}
 }
 
@@ -502,430 +715,201 @@ function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
 }
 
+/**
+ * 3. 효과음 합성 (Web Audio API)
+ */
 let audioCtx = null;
-let lastSoundTime = 0;
-function playScrubSound(toolTier) {
-  const now = performance.now();
-  if (now - lastSoundTime < 75) return;
-  lastSoundTime = now;
+function playTone(freq, type = 'triangle', duration = 0.07, vol = 0.06) {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    if (toolTier === 1) {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(190 + Math.random() * 80, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-    } else if (toolTier === 2) {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(420 + Math.random() * 160, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-    } else {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(860 + Math.random() * 240, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-    }
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.06);
+    osc.stop(audioCtx.currentTime + duration);
   } catch (e) {}
 }
 
-function getToolStats(lv) {
-  let tier = 1, name = '나무 붓', icon = '🖌️';
-  if (lv >= 8) { tier = 3; name = '정밀 레이저'; icon = '⚡'; }
-  else if (lv >= 4) { tier = 2; name = '끌과 망치'; icon = '⚒️'; }
+/**
+ * 4. 특성 스펙 및 가격 계산
+ */
+const TRAIT_DEFS = [
+  {
+    key: 'time',
+    icon: '⏱️',
+    name: '발굴 시간 연장',
+    desc: (lv) => `제한 시간 ${(5 + lv * 0.5).toFixed(1)}초 → 다음 ${(5 + (lv + 1) * 0.5).toFixed(1)}초`,
+    cost: (lv) => Math.round(180 * Math.pow(1.65, lv)),
+    max: 20
+  },
+  {
+    key: 'power',
+    icon: '⛏️',
+    name: '곡괭이 타격력',
+    desc: (lv) => `터치당 파괴력 ${1 + lv} → 다음 ${2 + lv} (단단한 돌 한방 파괴)`,
+    cost: (lv) => Math.round(250 * Math.pow(1.85, lv)),
+    max: 15
+  },
+  {
+    key: 'hint',
+    icon: '🔍',
+    name: '유물 감지 힌트',
+    desc: (lv) => `시작 시 유물 위치 ${lv}칸 표시 → 다음 ${lv + 1}칸 표시`,
+    cost: (lv) => Math.round(300 * Math.pow(1.9, lv)),
+    max: 8
+  },
+  {
+    key: 'price',
+    icon: '💰',
+    name: '유물 감정가 상승',
+    desc: (lv) => `정산 골드 보너스 +${lv * 10}% → 다음 +${(lv + 1) * 10}%`,
+    cost: (lv) => Math.round(200 * Math.pow(1.6, lv)),
+    max: 30
+  },
+  {
+    key: 'luck',
+    icon: '👑',
+    name: '대형·희귀 발굴 확률',
+    desc: (lv) => `2칸·4칸 대형 유물 출현율 +${lv * 12}% → 다음 +${(lv + 1) * 12}%`,
+    cost: (lv) => Math.round(280 * Math.pow(1.75, lv)),
+    max: 15
+  }
+];
 
-  const tierBonus = tier === 3 ? 2.4 : (tier === 2 ? 1.55 : 1.0);
-  const power = Math.round(22 * Math.pow(1.42, lv - 1) * tierBonus);
-  const radius = Math.min(54, 20 + (lv - 1) * 2.5 + (tier - 1) * 6);
-  const cost = Math.round(250 * Math.pow(1.75, lv - 1));
-  return { lv, tier, name, icon, power, radius, cost };
+function getMaxDigTime() {
+  return 5.0 + state.traits.time * 0.5;
 }
 
-function getBonuses() {
-  let speedMult = 1.0;
-  let incomeMult = 1.0;
-  THEMES.forEach(t => {
-    const complete = t.items.every(it => (state.owned[it.id] || 0) > 0);
-    if (complete) {
-      if (t.bonusType === 'speed') speedMult += t.bonusValue;
-      if (t.bonusType === 'income') incomeMult += t.bonusValue;
-    }
-  });
-  return { speedMult, incomeMult };
+function getTapPower() {
+  return 1 + state.traits.power;
 }
 
-function getPassiveIncomePerSec() {
-  let base = 0;
-  ALL_ITEMS.forEach(it => {
-    const cnt = state.owned[it.id] || 0;
-    if (cnt > 0) base += it.income * (1 + (cnt - 1) * 0.25);
-  });
-  return Math.floor(base * getBonuses().incomeMult);
+function getPriceMultiplier() {
+  return 1 + state.traits.price * 0.10;
 }
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const GRID = 36;
-const CELL_SIZE = canvas.width / GRID;
-let grid = [];
-let maxCellHp = 100;
-let currentRelic = null;
-let isCompleted = false;
-let isRubbing = false;
-let lastPt = null;
-let pointerPos = null;
-let particles = [];
-let shineX = -150;
-
-function pickRandomRelic() {
-  const r = Math.random();
-  let pool;
-  if (r < 0.20) pool = ALL_ITEMS.filter(i => i.grade === 'fake');
-  else if (r < 0.65) pool = ALL_ITEMS.filter(i => i.grade === 'common');
-  else if (r < 0.90) pool = ALL_ITEMS.filter(i => i.grade === 'rare');
-  else pool = ALL_ITEMS.filter(i => i.grade === 'legendary');
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function initStage() {
-  currentRelic = pickRandomRelic();
-  isCompleted = false;
-  shineX = -150;
-  maxCellHp = 85 + (state.stage - 1) * 42;
-  grid = Array.from({ length: GRID }, (_, gy) =>
-    Array.from({ length: GRID }, (_, gx) => {
-      const dx = (gx + 0.5) * CELL_SIZE - canvas.width / 2;
-      const dy = (gy + 0.5) * CELL_SIZE - canvas.height / 2;
-      const dist = Math.hypot(dx, dy);
-      return dist <= 155 ? maxCellHp : 0;
-    })
-  );
-  document.getElementById('stageText').textContent = `STAGE ${state.stage} (내구도 Lv.${state.stage})`;
-  document.getElementById('gradeText').textContent = '❓ 미확인 흙덩어리';
-  document.getElementById('gradeText').style.color = '#d4d0de';
-  document.getElementById('statusHint').textContent = '손가락으로 흙덩어리를 문질러 발굴하세요!';
-  updateProgressUI();
-}
-
-function getProgressPercent() {
-  let totalMax = 0, totalCur = 0;
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
-      const dx = (x + 0.5) * CELL_SIZE - canvas.width / 2;
-      const dy = (y + 0.5) * CELL_SIZE - canvas.height / 2;
-      if (Math.hypot(dx, dy) <= 155) {
-        totalMax += maxCellHp;
-        totalCur += grid[y][x];
+function getHallIncome(hallSlots) {
+  let sum = 0;
+  let filledCount = 0;
+  hallSlots.forEach(rid => {
+    if (rid) {
+      const item = RELIC_DB.find(r => r.id === rid);
+      if (item) {
+        sum += item.income;
+        filledCount++;
       }
     }
-  }
-  if (totalMax === 0) return 100;
-  const pct = Math.floor(((totalMax - totalCur) / totalMax) * 100);
-  return totalCur <= 0 ? 100 : Math.min(99, pct);
-}
-
-function scrubAt(x, y) {
-  if (isCompleted) return;
-  const tool = getToolStats(state.toolLevel);
-  const bonus = getBonuses();
-  const dmg = tool.power * bonus.speedMult * 0.38;
-  let hit = false;
-
-  for (let gy = 0; gy < GRID; gy++) {
-    for (let gx = 0; gx < GRID; gx++) {
-      if (grid[gy][gx] <= 0) continue;
-      const cx = (gx + 0.5) * CELL_SIZE;
-      const cy = (gy + 0.5) * CELL_SIZE;
-      if (Math.hypot(cx - x, cy - y) <= tool.radius) {
-        grid[gy][gx] = Math.max(0, grid[gy][gx] - dmg);
-        hit = true;
-      }
-    }
-  }
-
-  if (hit) {
-    playScrubSound(tool.tier);
-    if (navigator.vibrate) navigator.vibrate(8);
-    for (let i = 0; i < 3; i++) {
-      particles.push({
-        x, y,
-        vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4 - 1,
-        life: 1,
-        color: tool.tier === 3 ? '#38bdf8' : (tool.tier === 2 ? '#fbbf24' : '#a8896c')
-      });
-    }
-    const pct = updateProgressUI();
-    if (pct >= 100) completeRelic();
-  }
-}
-
-function scrubAlong(p1, p2) {
-  const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-  const steps = Math.max(1, Math.ceil(dist / 8));
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    scrubAt(p1.x + (p2.x - p1.x) * t, p1.y + (p2.y - p1.y) * t);
-  }
-}
-
-function updateProgressUI() {
-  const pct = getProgressPercent();
-  document.getElementById('percentText').textContent = `${pct}%`;
-  document.getElementById('progressFill').style.width = `${pct}%`;
-  return pct;
-}
-
-function completeRelic() {
-  if (isCompleted) return;
-  isCompleted = true;
-  shineX = -120;
-  if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
-
-  const meta = GRADE_META[currentRelic.grade];
-  const gTag = document.getElementById('gradeText');
-  gTag.textContent = meta.label;
-  gTag.style.color = meta.color;
-  document.getElementById('statusHint').textContent = '✨ 복원 및 감정 완료!';
-
-  const reward = Math.round(currentRelic.baseReward * (1 + (state.stage - 1) * 0.35));
-  state.gold += reward;
-  state.owned[currentRelic.id] = (state.owned[currentRelic.id] || 0) + 1;
-  state.stage += 1;
-  saveState();
-  updateHeaderUI();
-  renderMuseum();
-
-  setTimeout(() => {
-    document.getElementById('modalSubtitle').textContent = `[${meta.label}] 감정 결과`;
-    document.getElementById('modalEmoji').textContent = currentRelic.emoji;
-    document.getElementById('modalTitle').textContent = currentRelic.name;
-    document.getElementById('modalDesc').innerHTML =
-      `복원 보상: <strong style="color:#fbbf24;">+${reward.toLocaleString()} G</strong><br>` +
-      `박물관 전시 수익: <strong style="color:#38bdf8;">+${currentRelic.income} G/초</strong>`;
-    document.getElementById('modalOverlay').classList.add('show');
-  }, 480);
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const grad = ctx.createRadialGradient(190, 190, 20, 190, 190, 165);
-  grad.addColorStop(0, 'rgba(245, 185, 66, 0.16)');
-  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.save();
-  ctx.font = '165px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(currentRelic.emoji, 190, 198);
-  ctx.restore();
-
-  if (isCompleted && shineX < 520) {
-    shineX += 14;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(190, 190, 155, 0, Math.PI * 2);
-    ctx.clip();
-    const sGrad = ctx.createLinearGradient(shineX - 50, 0, shineX + 50, 380);
-    sGrad.addColorStop(0, 'rgba(255,255,255,0)');
-    sGrad.addColorStop(0.5, 'rgba(255,255,255,0.55)');
-    sGrad.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = sGrad;
-    ctx.fillRect(0, 0, 380, 380);
-    ctx.restore();
-  }
-
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
-      const hp = grid[y][x];
-      if (hp <= 0) continue;
-      const ratio = hp / maxCellHp;
-      ctx.fillStyle = ratio > 0.65 ? '#5c4433' : (ratio > 0.3 ? '#785a43' : 'rgba(156, 122, 94, 0.65)');
-      ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE + 0.6, CELL_SIZE + 0.6);
-    }
-  }
-
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life -= 0.06;
-    if (p.life <= 0) { particles.splice(i, 1); continue; }
-    ctx.globalAlpha = p.life;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  if (pointerPos && !isCompleted) {
-    const tool = getToolStats(state.toolLevel);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(pointerPos.x, pointerPos.y, tool.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = tool.tier === 3 ? '#38bdf8' : (tool.tier === 2 ? '#fbbf24' : '#f4f1ea');
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.font = '24px serif';
-    ctx.fillText(tool.icon, pointerPos.x + 12, pointerPos.y - 12);
-    ctx.restore();
-  }
-
-  requestAnimationFrame(draw);
-}
-
-function getCanvasPos(e) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: (e.clientX - rect.left) * (canvas.width / rect.width),
-    y: (e.clientY - rect.top) * (canvas.height / rect.height)
-  };
-}
-
-canvas.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  canvas.setPointerCapture(e.pointerId);
-  isRubbing = true;
-  const pt = getCanvasPos(e);
-  lastPt = pt;
-  pointerPos = pt;
-  scrubAt(pt.x, pt.y);
-});
-
-canvas.addEventListener('pointermove', (e) => {
-  e.preventDefault();
-  const pt = getCanvasPos(e);
-  pointerPos = pt;
-  if (!isRubbing) return;
-  if (lastPt) scrubAlong(lastPt, pt);
-  else scrubAt(pt.x, pt.y);
-  lastPt = pt;
-});
-
-canvas.addEventListener('pointerup', () => { isRubbing = false; lastPt = null; });
-canvas.addEventListener('pointercancel', () => { isRubbing = false; lastPt = null; });
-
-function updateHeaderUI() {
-  const tool = getToolStats(state.toolLevel);
-  const bonus = getBonuses();
-  const effPower = Math.round(tool.power * bonus.speedMult);
-
-  document.getElementById('goldDisplay').textContent = `${Math.floor(state.gold).toLocaleString()} G`;
-  document.getElementById('incomeDisplay').textContent = `박물관 +${getPassiveIncomePerSec().toLocaleString()} G/초`;
-  document.getElementById('toolIcon').textContent = tool.icon;
-  document.getElementById('toolName').textContent = `${tool.name} Lv.${tool.lv}`;
-  document.getElementById('toolDesc').textContent = `연마력 ${effPower} | 범위 ${Math.round(tool.radius)}px`;
-  document.getElementById('upgradeCost').textContent = `${tool.cost.toLocaleString()} G`;
-  document.getElementById('upgradeBtn').disabled = state.gold < tool.cost;
-}
-
-function renderMuseum() {
-  const list = document.getElementById('museumList');
-  list.innerHTML = '';
-  let ownedKinds = 0;
-
-  THEMES.forEach(t => {
-    const complete = t.items.every(it => (state.owned[it.id] || 0) > 0);
-    const sec = document.createElement('div');
-    sec.className = 'theme-section';
-    sec.innerHTML = `
-      <div class="theme-header">
-        <span class="theme-title">${t.name}</span>
-        <span class="theme-bonus ${complete ? 'unlocked' : ''}">${complete ? '활성화: ' : ''}${t.bonusLabel}</span>
-      </div>
-      <div class="relic-grid">
-        ${t.items.map(it => {
-          const cnt = state.owned[it.id] || 0;
-          if (cnt > 0) ownedKinds++;
-          return `
-            <div class="relic-slot ${cnt > 0 ? 'owned' : ''}">
-              <div class="relic-emoji">${it.emoji}</div>
-              <div class="relic-name">${cnt > 0 ? `${it.name} (x${cnt})` : '???'}</div>
-              <div class="relic-income">${cnt > 0 ? `+${it.income} G/초` : '미발굴'}</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-    list.appendChild(sec);
   });
-
-  const speedPct = Math.round((getBonuses().speedMult - 1) * 100);
-  document.getElementById('collectedCount').textContent = `${ownedKinds} / ${ALL_ITEMS.length}`;
-  document.getElementById('bonusSpeedText').textContent = `+${speedPct}%`;
+  // 전시실 4칸 꽉 채우면 세트 보너스 +25%
+  if (filledCount === 4) sum = Math.round(sum * 1.25);
+  return sum;
 }
 
-document.getElementById('upgradeBtn').addEventListener('click', () => {
-  const tool = getToolStats(state.toolLevel);
-  if (state.gold >= tool.cost) {
-    state.gold -= tool.cost;
-    state.toolLevel += 1;
-    saveState();
-    updateHeaderUI();
+function getTotalPassiveIncome() {
+  return state.halls.reduce((acc, hall) => acc + getHallIncome(hall), 0);
+}
+
+/**
+ * 5. 발굴 스테이지 생성 및 진행 로직
+ */
+let gridCols = 3;
+let tiles = [];          // { r, c, hp, maxHp, relicIdx, isHint }
+let placedRelics = [];   // { relic, r, c, w, h, cells: [[r,c]...], found }
+let timeLeft = 5.0;
+let timerRunning = false;
+let roundEnded = false;
+let timerInterval = null;
+
+function getGridSizeForStage(st) {
+  if (st >= 8) return 5; // 5x5 (25칸)
+  if (st >= 4) return 4; // 4x4 (16칸)
+  return 3;              // 3x3 (9칸)
+}
+
+function getBlockMaxHpForStage(st) {
+  if (st >= 9) return 4;
+  if (st >= 5) return 3;
+  return 2; // 처음에는 2번 두드려서 깨짐
+}
+
+function setupStage() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  roundEnded = false;
+  timeLeft = getMaxDigTime();
+
+  gridCols = getGridSizeForStage(state.stage);
+  const blockHp = getBlockMaxHpForStage(state.stage);
+
+  // 격자 초기화
+  tiles = [];
+  for (let r = 0; r < gridCols; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      tiles.push({ r, c, hp: blockHp, maxHp: blockHp, relicIdx: -1, isHint: false });
+    }
   }
-});
 
-document.getElementById('modalCloseBtn').addEventListener('click', () => {
-  document.getElementById('modalOverlay').classList.remove('show');
-  if (isCompleted) initStage();
-});
+  // 스테이지별 매장 유물 수 결정 (3x3은 1개, 4x4는 1~2개, 5x5는 2~3개)
+  const targetCount = gridCols === 3 ? 1 : (gridCols === 4 ? (Math.random() < 0.55 ? 2 : 1) : (Math.random() < 0.6 ? 3 : 2));
+  placedRelics = [];
 
-document.getElementById('resetBtn').addEventListener('click', () => {
-  if (confirm('모든 진행 데이터와 골드를 초기화할까요?')) {
-    localStorage.removeItem(STORAGE_KEY);
-    state = { gold: 0, stage: 1, toolLevel: 1, owned: {}, lastSaveTime: Date.now() };
-    updateHeaderUI();
-    renderMuseum();
-    initStage();
+  for (let i = 0; i < targetCount; i++) {
+    const relic = chooseRelicForStage(state.stage);
+    const placed = tryPlaceRelic(relic, placedRelics.length);
+    if (!placed) {
+      // 큰 유물 자리가 없으면 1칸 유물로 대체 배치
+      const fallback = RELIC_DB.filter(r => r.w === 1 && r.h === 1)[Math.floor(Math.random() * 4)];
+      tryPlaceRelic(fallback, placedRelics.length);
+    }
   }
-});
 
-document.querySelectorAll('nav button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.target).classList.add('active');
-    document.getElementById('mainScroll').scrollTop = 0;
+  // 힌트 특성 적용 (유물이 묻힌 타일 중 랜덤으로 hint 레벨만큼 표시)
+  const relicTiles = tiles.filter(t => t.relicIdx !== -1);
+  shuffleArray(relicTiles);
+  const hintCount = Math.min(state.traits.hint, relicTiles.length);
+  for (let i = 0; i < hintCount; i++) {
+    relicTiles[i].isHint = true;
+  }
+
+  // UI 갱신
+  document.getElementById('stageNumText').textContent = state.stage;
+  document.getElementById('gridSizeText').textContent = `${gridCols}×${gridCols}`;
+  document.getElementById('targetRelicHint').textContent = `매장 유물: ${placedRelics.length}개 (내구도 ${blockHp})`;
+  document.getElementById('timerStatusText').textContent = '블록을 두드리면 타이머가 시작됩니다!';
+  updateTimerUI();
+  renderBoard();
+}
+
+function chooseRelicForStage(st) {
+  const candidates = RELIC_DB.filter(r => r.minStage <= st);
+  const luckBonus = state.traits.luck * 0.12;
+  const weighted = candidates.map(r => {
+    const size = r.w * r.h;
+    let weight = size === 1 ? 10 : (size === 2 ? 5 * (1 + luckBonus) : 3.5 * (1 + luckBonus * 1.4));
+    if (r.id === 'r1_can') weight = Math.max(1.5, 4 - state.traits.luck * 0.3);
+    return { item: r, weight };
   });
-});
-
-setInterval(() => {
-  const inc = getPassiveIncomePerSec();
-  if (inc > 0) {
-    state.gold += inc;
-    updateHeaderUI();
-    saveState();
+  const totalW = weighted.reduce((s, x) => s + x.weight, 0);
+  let pick = Math.random() * totalW;
+  for (const w of weighted) {
+    pick -= w.weight;
+    if (pick <= 0) return w.item;
   }
-}, 1000);
-
-loadState();
-const elapsedSec = Math.min(3600 * 8, Math.floor((Date.now() - state.lastSaveTime) / 1000));
-const offlineEarn = elapsedSec * getPassiveIncomePerSec();
-if (offlineEarn > 0 && elapsedSec >= 10) {
-  state.gold += offlineEarn;
-  setTimeout(() => {
-    document.getElementById('modalSubtitle').textContent = '박물관 오프라인 정산';
-    document.getElementById('modalEmoji').textContent = '🏛️';
-    document.getElementById('modalTitle').textContent = `+${offlineEarn.toLocaleString()} G 획득!`;
-    document.getElementById('modalDesc').textContent = `자리를 비운 ${elapsedSec}초 동안 관람객 입장료가 쌓였습니다.`;
-    document.getElementById('modalOverlay').classList.add('show');
-  }, 300);
+  return candidates[0];
 }
 
-updateHeaderUI();
-renderMuseum();
-initStage();
-draw();
-</script>
-</body>
-</html>
+function tryPlaceRelic(relic, idx) {
+  const positions = [];
+  for (let r = 0; r <= gridCols - relic.h; r++) {
+    for (let c = 0; c <= gridCols - relic.w; c++) {
+      let ok = true;
+      for (let dr = 0; dr < relic.h; dr++) {
+        for (let dc = 0; dc < relic.w; dc++) {
+          const t = getTile(r + dr, c + dc);
+          if (!t
