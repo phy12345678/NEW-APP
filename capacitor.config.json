@@ -1,0 +1,9 @@
+{
+  "appId": "com.parkhyeongju.relictycoon",
+  "appName": "유물복원공방",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "backgroundColor": "#141218"
+  }
+}
