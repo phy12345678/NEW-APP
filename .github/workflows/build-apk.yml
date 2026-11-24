@@ -28,6 +28,7 @@ jobs:
           npm install
           npx cap add android
           npx cap sync android
+          sed -i 's/RelicTycoon2/유물복원공방2/g' android/app/src/main/res/values/strings.xml
 
       - name: Build Debug APK
         run: |
